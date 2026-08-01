@@ -1,0 +1,14 @@
+@import "tailwindcss";
+
+:root {
+  --color-bg: #0b0d10;
+  --color-fg: #d8dee4;
+  --color-accent: #e8a33d;
+  --color-muted: #5b6572;
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+  font-family: ui-monospace, "JetBrains Mono", "SFMono-Regular", monospace;
+}
