@@ -1,0 +1,11 @@
+fastapi
+uvicorn[standard]
+psycopg[binary]
+pydantic
+neo4j
+splink
+anthropic
+python-dotenv
+httpx
+pandas
+apscheduler
