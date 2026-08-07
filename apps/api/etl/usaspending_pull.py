@@ -55,6 +55,42 @@ def search_awards(
             time.sleep(0.3)
     return results
 
+SUBAWARD_FIELDS = [
+    "Sub-Awardee Name",
+    "Sub-Award Amount",
+    "Sub-Award Date",
+    "Prime Recipient Name",
+    "Prime Award ID",
+    "Prime Recipient UEI",
+    "Sub-Awardee UEI",
+]
+
+def search_subawards(naics_codes, agency_names, start_date, end_date, award_type_codes=("A", "B", "C", "D")):
+    results = []
+    page = 1
+    with httpx.Client(base_url=USASPENDING_BASE, timeout=30.0) as client:
+        while True:
+            body = {
+                "subawards": True,
+                "filters": {
+                    "time_period": [{"start_date": start_date.isoformat(), "end_date": end_date.isoformat()}],
+                    "naics_codes": naics_codes,
+                    "agencies": [{"type": "awarding", "tier": "toptier", "name": n} for n in agency_names],
+                    "award_type_codes": list(award_type_codes),
+                },
+                "fields": SUBAWARD_FIELDS,
+                "page": page, "limit": 100,
+                "sort": "Sub-Award Amount", "order": "desc",
+            }
+            response = client.post("/api/v2/search/spending_by_award/", json=body)
+            response.raise_for_status()
+            payload = response.json()
+            results.extend(payload["results"])
+            if not payload.get("page_metadata", {}).get("hasNext", False):
+                break
+            page += 1
+            time.sleep(0.3)
+    return results
 
 def fetch_award_detail(generated_internal_id: str) -> dict:
     with httpx.Client(base_url=USASPENDING_BASE, timeout=30.0) as client:
