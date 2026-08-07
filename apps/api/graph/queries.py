@@ -54,6 +54,20 @@ class GraphClient:
             capabilities=capabilities,
         )
 
+    def upsert_subcontract(self, prime_uei: str, sub_uei: str, amount: float):
+        self.driver.execute_query(
+            """
+            MERGE (prime:Company {uei: $prime_uei})
+            MERGE (sub:Company {uei: $sub_uei})
+            MERGE (prime)-[r:SUBCONTRACTED_WITH]-(sub)
+            ON CREATE SET r.total_amount = $amount, r.contract_count = 1
+            ON MATCH SET r.total_amount = r.total_amount + $amount, r.contract_count = r.contract_count + 1
+            """,
+            prime_uei=prime_uei,
+            sub_uei=sub_uei,
+            amount=amount,
+        )
+
     def recommend_partners(self, capabilities: list[str], agency: str, exclude_uei: str, limit: int = 10) -> list[dict]:
         records, _, _ = self.driver.execute_query(
             """
@@ -72,11 +86,11 @@ class GraphClient:
             }
             CALL {
                 WITH candidate
-                OPTIONAL MATCH (candidate)-[:SUBCONTRACTED_WITH]-(:Company {uei: $exclude_uei})
-                RETURN count(*) > 0 AS has_teamed_before
+                OPTIONAL MATCH (candidate)-[r:SUBCONTRACTED_WITH]-(:Company {uei: $exclude_uei})
+                RETURN coalesce(r.contract_count, 0) AS teaming_count
             }
             RETURN candidate.uei AS uei, candidate.name AS name,
-                   capability_match, agency_contracts, most_recent_win, has_teamed_before
+                capability_match, agency_contracts, most_recent_win, teaming_count
             ORDER BY capability_match DESC, agency_contracts DESC
             LIMIT $limit
             """,
