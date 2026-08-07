@@ -5,7 +5,8 @@ import psycopg
 from apscheduler.schedulers.blocking import BlockingScheduler
 
 from etl.sam_pull import enrich_entities
-from etl.usaspending_pull import fetch_award_detail, search_awards
+from etl.usaspending_pull import fetch_award_detail, search_awards, search_subawards
+from graph.queries import GraphClient
 
 NAICS_CODES = ["541512", "541519"]
 AGENCIES = ["Department of Defense", "Department of Homeland Security"]
@@ -46,9 +47,25 @@ def run_sam_enrichment():
                 )
         conn.commit()
 
+def run_subaward_pull():
+    graph = GraphClient(os.environ["NEO4J_URI"], os.environ["NEO4J_USER"], os.environ["NEO4J_PASSWORD"])
+    subawards = search_subawards(
+        naics_codes=NAICS_CODES,
+        agency_names=AGENCIES,
+        start_date=date.today() - timedelta(days=1),
+        end_date=date.today(),
+    )
+    for sub in subawards:
+        prime_uei = sub.get("Prime Recipient UEI") or ""
+        sub_uei = sub.get("Sub-Awardee UEI") or ""
+        amount = sub.get("Sub-Award Amount") or 0
+        if prime_uei and sub_uei:
+            graph.upsert_subcontract(prime_uei=prime_uei, sub_uei=sub_uei, amount=amount)
+    graph.close()
 
 if __name__ == "__main__":
     scheduler = BlockingScheduler()
     scheduler.add_job(run_daily_pull, "cron", hour=3)
     scheduler.add_job(run_sam_enrichment, "cron", hour=4)
+    scheduler.add_job(run_subaward_pull, "cron", hour=5)
     scheduler.start()
