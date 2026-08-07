@@ -8,6 +8,7 @@ type Recommendation = {
   score: number;
   capability_match: number;
   agency_contracts: number;
+  evidence?: string | null;
 };
 
 export default function Home() {
@@ -74,6 +75,9 @@ export default function Home() {
             <p className="mt-1 text-xs text-[var(--color-muted)]">
               {r.capability_match} matching capabilities · {r.agency_contracts} contracts with this agency
             </p>
+            {r.evidence && (
+              <p className="mt-2 text-sm text-[var(--color-fg)]">{r.evidence}</p>
+            )}
           </div>
         ))}
       </div>
