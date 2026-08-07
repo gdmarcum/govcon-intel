@@ -6,6 +6,7 @@ from pydantic import BaseModel
 
 from extraction.extract import EXTRACTION_MODEL, client as anthropic_client
 from graph.queries import GraphClient
+from recommend.narrate import narrate_candidates
 from recommend.score import score_candidates
 
 graph_client = GraphClient(
@@ -38,7 +39,6 @@ class RecommendRequest(BaseModel):
 def health():
     return {"status": "ok"}
 
-
 @app.post("/recommend")
 def recommend(request: RecommendRequest):
     parsed = anthropic_client.messages.parse(
@@ -54,4 +54,7 @@ def recommend(request: RecommendRequest):
         exclude_uei=request.exclude_uei,
     )
     ranked = score_candidates(candidates)
+    evidence = narrate_candidates(requirements.capabilities, requirements.agency, ranked)
+    for candidate in ranked:
+        candidate["evidence"] = evidence.get(candidate["uei"])
     return {"requirements": requirements.model_dump(), "recommendations": ranked}
