@@ -27,13 +27,14 @@ def score_candidates(candidates: list[dict], today: date | None = None) -> list[
     today = today or date.today()
     max_capability = max((c["capability_match"] for c in candidates), default=0)
     max_agency = max((c["agency_contracts"] for c in candidates), default=0)
+    max_teaming = max((c["teaming_count"] for c in candidates), default=0)
     scored = []
     for c in candidates:
         total = (
             WEIGHTS["capability_match"] * _normalize(c["capability_match"], max_capability)
             + WEIGHTS["agency_experience"] * _normalize(c["agency_contracts"], max_agency)
             + WEIGHTS["recency"] * _recency_score(c["most_recent_win"], today)
-            + WEIGHTS["teaming_history"] * (1.0 if c["has_teamed_before"] else 0.0)
+            + WEIGHTS["teaming_history"] * _normalize(c["teaming_count"], max_teaming)
         )
         scored.append({**c, "score": round(total, 4)})
     return sorted(scored, key=lambda c: c["score"], reverse=True)
